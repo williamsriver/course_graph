@@ -3,7 +3,23 @@
         <v-main>加载项：{{loading_item}}/{{loaded_item}}</v-main>
         <v-main>层级构建：{{load_layer?'完成':'正在进行'}}</v-main>
         <v-main>图形构建：{{load_graph?'完成':'正在进行'}}</v-main>
-        <div id="graph1" style="width:1900px; height: 1500px;"></div>
+        <div id="graph1" style="width:1900px; height: 1500px;" ref="mychart"></div>
+        <v-row>
+            <v-spacer></v-spacer>
+            <v-col cols="9">
+                <v-row>
+                    <v-col v-for="(color,index) in color_list"
+                           :key="index">
+                        <v-row>
+                            <v-col cols="3" :style="{backgroundColor:color}" style="border-radius: 5%; height: 20px"></v-col>
+                            <v-col>第{{index+1}}学期</v-col>
+                        </v-row>
+
+                    </v-col>
+                </v-row>
+            </v-col>
+            <v-spacer></v-spacer>
+        </v-row>
     </v-app>
 </template>
 
@@ -23,7 +39,6 @@ export default {
   name: 'Table',
     data:()=>({
         courses_table:[],//course_table : the original info getting from servers
-        chart1:'',
         node_degree:[],//node_degree: the degree (including entries and exits) of a node, in course's ID
         links:[],//links: links of node in their names
         order_courses:[],//order_courses: list of all the courses, get course in ID
@@ -44,6 +59,11 @@ export default {
         loaded_item:0,
         loading_flag:false,
         mounted_flag:false,
+
+        color_list:['#C62828','#AD1457','#6A1B9A', '#4527A0',
+            '#AA00FF', '#2196F3','#283593', '#1565C0',
+            '#00838F','#FF8F00','#558B2F','#6D4C41'],
+
 
 
 
@@ -80,12 +100,17 @@ export default {
           var layers = this.layers;
           var layer_list = this.layer_list;
           var nodes_data = [];//nodes_data: the data ready to get in the graph
-          var width_interval = 170;//distance between two layers
+          var width_interval = 130;//distance between two layers
           var graph_height = 900;
-          var initial_size = 44;
+          var initial_size = 50;
           var node_degree = this.node_degree;
+          //var courses_table = this.courses_table;
+          var semester_list = [];
+          var colorList = this.color_list;
+
           //get data into nodes_data
           for (var layer=1;layer<=layers;layer++){
+              // eslint-disable-next-line no-unused-vars
               layer_list[layer].forEach(function (course_id,index) {
                   var temp=courses[course_id];
 
@@ -110,11 +135,21 @@ export default {
           }
           //let labels of nodes show
           nodes_data.forEach(function (node) {
-              node.itemStyle = null;
+              node.itemStyle = {
+                  color :colorList[node.semester]
+              };
               node.label= {
                   show: true,
               }
           });
+
+          for (var i=0;i<12;i++){
+              semester_list.push({
+                  name:'第'+(i+1)+'学期',
+                  text:'第'+(i+1)+'学期',
+                  color:colorList[i],
+              })
+          }
 
           //create graph with config
           var links = this.links;
@@ -126,6 +161,7 @@ export default {
                   text: '课程关系表',
               },
               type:'graph',
+
               //hover animation config
               hoverAnimation:true,
               animationDuration: 1500,
@@ -133,50 +169,59 @@ export default {
               //data
               series : [
                   {
-                      symbolSize:18,
-                      type: 'graph',
+                      name:'courses',
+                      edgeSymbol:['none','arrow'],
                       data: nodes_data,
                       layout:'none',
-                      links: links,
+                      type:'graph',
+                      links:links,
                       itemStyle: {
                           borderColor: '#fff',
                           borderWidth: 1,
                           shadowBlur: 10,
-                          shadowColor: 'rgba(0, 0, 0, 0.3)'
+                          shadowColor: 'rgba(0, 0, 0, 0.3)',
                       },
-                  }
+                      emphasis: {
+                          itemStyle: {
+                              // highlight/emphasis color。
+                          },
+                          label:{
+                              position:'right',
+                              distance:7,
+                              backgroundColor:'blue',
+                              color:'white',
+                              borderWidth:10,
+                              borderRadius:5,
+                              padding:10,
+                              // emphasis text
+                              formatter: function (params) {
+                                  return params.name+'\n' +
+                                      '课程id：'+params.data.course_id+'\n'+
+                                      '修读学期：'+params.data.semester+'\n'+
+                                      '课程类型：'+params.data.major+'\n'+
+                                      '学分：'+params.data.credit+'\n';
+                              }
+                          },
+                          lineStyle: {
+                              width:5,
+                              opacity:1,
+                          },
+                          edgeLabel:{
+                              show:true,
+                              position: 'middle',
+                              formatter:function (params) {
+                                  return params.value;
+                              },
+                          }
+                      },
+                      lineStyle: {
+                          width:1,
+                          opacity:0.2,
+                      },
+                      draggable:true,
+                  },
               ],
-              lineStyle: {
-                  color: 'source',
-                  curveness: 0.1
-              },
-              //emphasis mode config
-              emphasis: {
-                  itemStyle: {
-                      // highlight/emphasis color。
-                      color: 'blue'
-                  },
-                  label:{
-                      position:'right',
-                      distance:7,
-                      backgroundColor:'blue',
-                      color:'white',
-                      borderWidth:10,
-                      borderRadius:5,
-                      padding:10,
-                      // emphasis text
-                      formatter: function (params) {
-                        return params.name+'\n' +
-                            '课程id：'+params.data.course_id+'\n'+
-                            '修读学期：'+params.data.semester+'\n'+
-                            '课程类型：'+params.data.major+'\n'+
-                            '学分：'+params.data.credit+'\n';
-                      }
-                  },
-                  lineStyle: {
-                      width: 10
-                  }
-              }
+
           }
           //create graph
           var graph1 = echarts.init(document.getElementById('graph1'));
